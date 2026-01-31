@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Decoder 118 PAS</title>
+
+    <style>
+        :root {
+            --blue-pas:#007cc2;
+            --red-pas:#e30613;
+            --rosso:#ff3b30;
+            --giallo:#ffcc00;
+            --verde:#34c759;
+        }
+
+        html, body {
+            margin: 0; height: 100%;
+            background: #1c1c1e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .phone-frame {
+            width: 100%; max-width: 360px; height: 100vh;
+            background: #f2f2f7;
+            display: flex; flex-direction: column;
+        }
+
+        /* Supporto per Notch iPhone */
+        @media (min-height: 700px) {
+            .phone-frame { height: 720px; border-radius: 45px; overflow: hidden; }
+        }
+
+        .header {
+            background: #fff;
+            padding: 50px 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid #d1d1d6;
+        }
+
+        .content { padding: 20px; flex: 1; }
+
+        .input-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        label {
+            font-size: .7rem;
+            font-weight: 700;
+            color: #8e8e93;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 2rem;
+            font-weight: 900;
+            text-align: center;
+            border-radius: 12px;
+            border: 2px solid #efeff4;
+            text-transform: uppercase;
+            box-sizing: border-box;
+            /* Rimuove ombre interne iOS */
+            -webkit-appearance: none;
+        }
+
+        #result {
+            display: none;
+            margin-top: 20px;
+            background: #fff;
+            padding: 25px 20px;
+            border-radius: 20px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .badge {
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            margin-top: 15px;
+        }
+
+        .bgR { background: var(--rosso); }
+        .bgG { background: var(--giallo); color: #000; }
+        .bgV { background: var(--verde); }
+        .bgB { background: #999; }
+        .bgU { background: #000; }
+    </style>
+</head>
+
+<body>
+
+<div class="phone-frame">
+    <div class="header">
+        <div style="font-weight:900; color:var(--blue-pas); font-size: 1.1rem;">PUBBLICA ASSISTENZA</div>
+        <div style="font-weight:900; color:var(--red-pas); font-size: 1.1rem;">& SOCCORSO odv</div>
+    </div>
+
+    <div class="content">
+        <div class="input-card">
+            <label>Inserisci codice triage</label>
+            <input id="code" 
+                   type="text" 
+                   maxlength="8" 
+                   oninput="decode()" 
+                   autocomplete="off" 
+                   autocorrect="off" 
+                   autocapitalize="characters" 
+                   spellcheck="false" 
+                   placeholder="YC13R">
+        </div>
+
+        <div id="result">
+            <div id="luogo" style="color:#8e8e93; font-weight:700;"></div>
+            <div id="patologia" style="margin:10px 0; font-size:1.3rem; font-weight:800; color:#1c1c1e;"></div>
+            <div id="badge" class="badge"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const luoghi = {
+    'S':'STRADA', 'P':'LUOGO PUBBLICO', 'Y':'IMP. SPORTIVI',
+    'K':'CASA', 'L':'LAVORO', 'Q':'SCUOLA', 'Z':'NON DEFINITO'
+};
+
+const patologie = {
+    1:"Traumatico", 2:"Cardiocircolatorio", 3:"Respiratorio",
+    4:"Neurologico", 5:"Psichiatrico", 6:"Neoplastico",
+    7:"Tossicologico", 8:"Metabolico", 9:"Gastroenterologico",
+    10:"Urologico", 11:"Oculistico", 12:"Otorino",
+    13:"Dermatologico", 14:"Ostetrico-Ginecologico",
+    15:"Infettivo", 19:"Altra Patologia", 20:"Non Identificata"
+};
+
+const urgenze = {
+    'R':['ROSSO','bgR'],
+    'G':['GIALLO','bgG'],
+    'V':['VERDE','bgV'],
+    'B':['BIANCO','bgB'],
+    'U':['ARRESTO C_C','bgU']
+};
+
+function decode() {
+    const inputField = document.getElementById('code');
+    const v = inputField.value.toUpperCase().trim();
+    const res = document.getElementById('result');
+    
+    // Su iOS serve almeno la struttura minima: Prefisso + Cifra + Urgenza
+    if (v.length < 3) {
+        res.style.display = 'none';
+        return;
+    }
+
+    const p = v[0]; 
+    const u = v[v.length - 1];
+    
+    // Estrazione numerica robusta per WebKit
+    // Prende tutto ciò che sta tra il primo e l'ultimo carattere e pulisce lettere (come la 'C')
+    const middle = v.substring(1, v.length - 1);
+    const numericPart = middle.replace(/\D/g, ''); 
+    const m = parseInt(numericPart);
+
+    // Update UI
+    const luogoText = luoghi[p] || 'NON IDENTIFICATO';
+    const patoText = patologie[m] || 'SCONOSCIUTA';
+
+    if (urgenze[u]) {
+        document.getElementById('luogo').innerText = luogoText;
+        document.getElementById('patologia').innerText = patoText;
+        
+        const b = urgenze[u];
+        const badge = document.getElementById('badge');
+        badge.className = 'badge ' + b[1];
+        badge.innerText = 'URGENZA: ' + b[0];
+        
+        res.style.display = 'block';
+    } else {
+        // Se l'ultima lettera non è un'urgenza valida, nascondi il risultato
+        res.style.display = 'none';
+    }
+}
+</script>
+
+</body>
+</html>
