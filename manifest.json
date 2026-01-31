@@ -1,0 +1,8 @@
+{
+  "name": "Decoder 118 PAS",
+  "short_name": "Decoder118",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#007cc2"
+}
