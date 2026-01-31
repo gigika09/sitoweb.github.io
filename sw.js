@@ -1,8 +1,10 @@
-const CACHE_NAME = "decoder118-v1";
+const CACHE_NAME = "decoder118-v3";
 
 const FILES_TO_CACHE = [
-  "/",
-  "/index.html"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./sw.js"
 ];
 
 self.addEventListener("install", event => {
